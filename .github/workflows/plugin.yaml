@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - "main"
+      - "banana-server"
   workflow_dispatch:
     description: 'build'
 
@@ -60,14 +61,20 @@ jobs:
         docker cp temp:/mod-release.zip ./FiveStack-v0.0.${{ steps.get_latest_release.outputs.result }}.zip
         docker rm temp
         
+    - name: Sanitize branch name
+      id: sanitize
+      run: |
+        BRANCH_NAME="${{ github.ref_name }}"
+        SANITIZED_BRANCH=$(echo "$BRANCH_NAME" | sed 's/[^a-zA-Z0-9]/-/g')
+        echo "sanitized_branch=$SANITIZED_BRANCH" >> $GITHUB_OUTPUT
+
     - name: Build and Push Docker image
       uses: docker/build-push-action@v6
       with:
         push: true
         tags: |
-            ghcr.io/${{ github.repository_owner }}/game-server:latest
+            ghcr.io/${{ github.repository_owner }}/game-server:${{ steps.sanitize.outputs.sanitized_branch }}
             ghcr.io/${{ github.repository_owner }}/game-server:${{ github.sha }}
-            ghcr.io/${{ github.repository_owner }}/game-server:v0.0.${{ steps.get_latest_release.outputs.result }}
         build-args: |
           RELEASE_VERSION=0.0.${{ steps.get_latest_release.outputs.result }}
 
