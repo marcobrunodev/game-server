@@ -75,12 +75,12 @@ ENV STEAM_RELAY="false"
 
 ENV SERVER_TYPE="Ranked"
 
-ENV METAMOD_URL=https://mms.alliedmods.net/mmsdrop/2.0/mmsource-2.0.0-git1374-linux.tar.gz
-ENV COUNTER_STRIKE_SHARP_URL=https://github.com/roflmuffin/CounterStrikeSharp/releases/download/v1.0.355/counterstrikesharp-with-runtime-linux-1.0.355.zip
+ENV METAMOD_URL=https://mms.alliedmods.net/mmsdrop/2.0/mmsource-2.0.0-git1383-linux.tar.gz
+ENV COUNTER_STRIKE_SHARP_URL=https://github.com/roflmuffin/CounterStrikeSharp/releases/download/v1.0.362/counterstrikesharp-with-runtime-linux-1.0.362.zip
 
 RUN apt-get update && \
 	apt-get install -y --no-install-recommends \
-	wget locales procps jq ca-certificates curl unzip \
+	wget locales procps jq ca-certificates curl unzip rsync \
 	lib32gcc-s1 lib32stdc++6 lib32z1 lsof libicu-dev && \
 	echo "en_US.UTF-8 UTF-8" > /etc/locale.gen && \
 	locale-gen && \

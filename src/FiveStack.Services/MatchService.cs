@@ -1,4 +1,3 @@
-using System.Runtime.InteropServices;
 using System.Text.Json;
 using CounterStrikeSharp.API;
 using FiveStack.Entities;
@@ -60,16 +59,20 @@ public class MatchService
 
     public unsafe string GetWorkshopID()
     {
-        IntPtr networkGameServer = _networkServerService.GetIGameServerHandle();
-        IntPtr vtablePtr = Marshal.ReadIntPtr(networkGameServer);
-        IntPtr functionPtr = Marshal.ReadIntPtr(vtablePtr + (25 * IntPtr.Size));
-        var getAddonName = Marshal.GetDelegateForFunctionPointer<GetAddonNameDelegate>(functionPtr);
-        IntPtr result = getAddonName(networkGameServer);
-        return Marshal.PtrToStringAnsi(result)!.Split(',')[0];
+        return _networkServerService.GetWorkshopID();
     }
 
     public async void GetMatchFromApi()
     {
+        MatchManager? matchManager = _currentMatch;
+        if (matchManager != null && matchManager._mapChangeCountdownTimer != null)
+        {
+            _logger.LogInformation(
+                "map change countdown timer is still active, skipping match fetch"
+            );
+            return;
+        }
+
         if (_environmentService.IsOfflineMode())
         {
             GetMatchFromOffline();

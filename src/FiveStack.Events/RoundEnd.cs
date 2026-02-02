@@ -4,6 +4,7 @@ using CounterStrikeSharp.API.Modules.Utils;
 using FiveStack.Entities;
 using FiveStack.Enums;
 using FiveStack.Utilities;
+using Microsoft.Extensions.Logging;
 
 namespace FiveStack;
 
@@ -11,6 +12,7 @@ public partial class FiveStackPlugin
 {
     CsTeam roundWinner;
     int timeoutGivenForOvertime;
+    eWinReason? reason;
 
     [GameEventHandler]
     public HookResult OnRoundOfficiallyEnded(EventRoundOfficiallyEnded @event, GameEventInfo info)
@@ -49,6 +51,29 @@ public partial class FiveStackPlugin
     [GameEventHandler]
     public HookResult OnRoundEnd(EventRoundEnd @event, GameEventInfo info)
     {
+        switch (@event.Message)
+        {
+            case "#SFUI_Notice_Terrorists_Win":
+                reason = eWinReason.TerroristsWin;
+                break;
+            case "#SFUI_Notice_CTs_Win":
+                reason = eWinReason.CTsWin;
+                break;
+            case "#SFUI_Notice_Target_Bombed":
+                reason = eWinReason.BombExploded;
+                break;
+            case "#SFUI_Notice_Target_Saved":
+                reason = eWinReason.TimeRanOut;
+                break;
+            case "#SFUI_Notice_Bomb_Defused":
+                reason = eWinReason.BombDefused;
+                break;
+            default:
+                _logger.LogWarning($"Unknown round end reason: {@event.Message}");
+                reason = eWinReason.Unknown;
+                break;
+        }
+
         MatchManager? match = _matchService.GetCurrentMatch();
         MatchMap? currentMap = match?.GetCurrentMap();
         MatchData? matchData = match?.GetMatchData();
@@ -79,20 +104,13 @@ public partial class FiveStackPlugin
             return;
         }
 
-        int totalRoundsPlayed = _gameServer.GetTotalRoundsPlayed();
-
-        CsTeam lineup1Side = TeamUtility.GetLineupSide(
-            matchData,
-            currentMap,
-            matchData.lineup_1_id,
-            totalRoundsPlayed
-        );
-        CsTeam lineup2Side = TeamUtility.GetLineupSide(
-            matchData,
-            currentMap,
-            matchData.lineup_2_id,
-            totalRoundsPlayed
-        );
+        (
+            int lineup1Score,
+            int lineup2Score,
+            CsTeam lineup1Side,
+            CsTeam lineup2Side,
+            int totalRoundsPlayed
+        ) = _matchEvents.GetRoundInformation();
 
         _matchEvents.PublishGameEvent(
             "score",
@@ -101,10 +119,7 @@ public partial class FiveStackPlugin
                 { "time", DateTime.Now },
                 { "match_map_id", currentMap.id },
                 { "round", totalRoundsPlayed },
-                {
-                    "lineup_1_score",
-                    $"{TeamUtility.GetTeamScore(matchData, currentMap, matchData.lineup_1_id, totalRoundsPlayed)}"
-                },
+                { "lineup_1_score", lineup1Score },
                 {
                     "lineup_1_money",
                     $"{TeamUtility.GetTeamMoney(matchData, currentMap, matchData.lineup_1_id, totalRoundsPlayed)}"
@@ -113,10 +128,7 @@ public partial class FiveStackPlugin
                     "lineup_1_timeouts_available",
                     $"{currentMap?.lineup_1_timeouts_available ?? 0}"
                 },
-                {
-                    "lineup_2_score",
-                    $"{TeamUtility.GetTeamScore(matchData, currentMap!, matchData.lineup_2_id, totalRoundsPlayed)}"
-                },
+                { "lineup_2_score", $"{lineup2Score}" },
                 {
                     "lineup_2_money",
                     $"{TeamUtility.GetTeamMoney(matchData, currentMap!, matchData.lineup_2_id, totalRoundsPlayed)}"
@@ -131,6 +143,7 @@ public partial class FiveStackPlugin
                     "winning_side",
                     totalRoundsPlayed == 0 ? "None" : $"{TeamUtility.CSTeamToString(roundWinner)}"
                 },
+                { "winning_reason", $"{reason}" },
                 {
                     "backup_file",
                     SendBackupRound

@@ -1,4 +1,4 @@
-using System.Runtime.InteropServices;
+using System.Text.Json.Serialization;
 using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Modules.Cvars;
@@ -13,9 +13,6 @@ using Microsoft.Extensions.Logging;
 using Timer = CounterStrikeSharp.API.Modules.Timers.Timer;
 
 namespace FiveStack;
-
-[UnmanagedFunctionPointer(CallingConvention.ThisCall)]
-delegate IntPtr GetAddonNameDelegate(IntPtr self);
 
 public class MatchManager
 {
@@ -41,7 +38,7 @@ public class MatchManager
     public MatchService _matchService;
 
     private int _remainingMapChangeDelay = 0;
-    private Timer? _mapChangeCountdownTimer;
+    public Timer? _mapChangeCountdownTimer;
 
     public MatchManager(
         ILogger<MatchManager> logger,
@@ -253,20 +250,21 @@ public class MatchManager
         UpdateMapStatus(isOverTime() ? eMapStatus.Overtime : eMapStatus.Live);
     }
 
-    public void UpdateMapStatus(eMapStatus status)
+    public void UpdateMapStatus(eMapStatus status, Guid? winningLineupId = null)
     {
         if (_matchData == null)
         {
             return;
         }
 
+        if (_currentMapStatus == status)
+        {
+            return;
+        }
+
         _logger.LogInformation($"Update Map Status {_currentMapStatus} -> {status}");
 
-        if (
-            _currentMapStatus == eMapStatus.Unknown
-            && status != eMapStatus.Live
-            && status != eMapStatus.Overtime
-        )
+        if (_currentMapStatus == eMapStatus.Unknown)
         {
             _backUpManagement.CheckForBackupRestore();
         }
@@ -333,17 +331,21 @@ public class MatchManager
             case eMapStatus.Live:
                 StartLive();
                 break;
+            case eMapStatus.Finished:
             case eMapStatus.Surrendered:
-            case eMapStatus.UploadingDemo:
                 _matchDemos.Stop();
                 _surrenderSystem.Reset();
                 break;
-            case eMapStatus.Finished:
+            case eMapStatus.UploadingDemo:
                 _surrenderSystem.Reset();
+                if (_currentMapStatus == eMapStatus.Unknown || IsMapFinished())
+                {
+                    return;
+                }
                 break;
         }
 
-        _matchEvents.PublishMapStatus(status);
+        _matchEvents.PublishMapStatus(status, winningLineupId);
         _currentMapStatus = status;
     }
 
@@ -367,7 +369,7 @@ public class MatchManager
         }
 
         _logger.LogInformation(
-            $"Game State {_currentMap.status} on ({_currentMap.map.name}) / {Server.MapName}"
+            $"Game State {_currentMap.status} expected {_currentMap.map.name}, on {Server.MapName}"
         );
 
         if (_currentMap.map.workshop_map_id is not null)
@@ -386,6 +388,13 @@ public class MatchManager
         else if (!Server.MapName.ToLower().Contains(_currentMap.map.name.ToLower()))
         {
             ChangeMap(_currentMap.map);
+            return;
+        }
+
+        if (_matchData == null || IsMapFinished())
+        {
+            _matchDemos.Stop();
+            _surrenderSystem.Reset();
             return;
         }
 
@@ -486,6 +495,7 @@ public class MatchManager
             delay,
             () =>
             {
+                _logger.LogInformation("map change delay complete");
                 _mapChangeCountdownTimer?.Kill();
                 _mapChangeCountdownTimer = null;
                 _matchService.GetMatchFromApi();
@@ -519,14 +529,14 @@ public class MatchManager
         _gameServer.SendCommands(["tv_broadcast 0"]);
         Reset();
 
-        _logger.LogInformation($"Changing Map {map.name}");
-
         if (map.workshop_map_id == null && Server.IsMapValid(map.name))
         {
+            _logger.LogInformation($"Changing Map {map.name}");
             _gameServer.SendCommands([$"changelevel \"{map.name}\""]);
         }
         else
         {
+            _logger.LogInformation($"Changing Map {map.name} / {map.workshop_map_id}");
             _gameServer.SendCommands([$"host_workshop_map {map.workshop_map_id}"]);
         }
     }
@@ -915,7 +925,7 @@ public class MatchManager
 
     public void SetupBroadcast()
     {
-        if (_matchData == null)
+        if (_matchData == null || IsMapFinished())
         {
             return;
         }
@@ -946,6 +956,7 @@ public class MatchManager
 
     public void Reset()
     {
+        _logger.LogInformation("resetting match state");
         _resumeMessageTimer?.Kill();
         _mapChangeCountdownTimer?.Kill();
 

@@ -62,6 +62,7 @@ public class GameDemos
         string lockFilePath = GetLockFilePath(match.id);
         if (File.Exists(lockFilePath))
         {
+            _logger.LogInformation("Demo is already recording");
             return;
         }
 
@@ -91,7 +92,8 @@ public class GameDemos
         _gameServer.SendCommands(["tv_broadcast 0"]);
         Server.NextFrame(() =>
         {
-            _gameServer.SendCommands(["tv_stoprecord"]);
+            _logger.LogInformation("Stopping demo recording");
+            _gameServer.SendCommands(["tv_stoprecord", "tv_stop"]);
         });
     }
 
