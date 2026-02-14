@@ -78,4 +78,22 @@ public partial class FiveStackPlugin
         if (player == null) return;
         _warmupSystem.ShowHelp(player);
     }
+
+    [ConsoleCommand("css_yes", "Vote yes on current vote")]
+    [ConsoleCommand("css_y", "Vote yes on current vote")]
+    [CommandHelper(whoCanExecute: CommandUsage.CLIENT_ONLY)]
+    public void OnVoteYes(CCSPlayerController? player, CommandInfo command)
+    {
+        if (player == null || !_warmupSystem.IsWarmupMode()) return;
+        _warmupSystem.VoteYes(player);
+    }
+
+    [ConsoleCommand("css_no", "Vote no on current vote")]
+    [ConsoleCommand("css_n", "Vote no on current vote")]
+    [CommandHelper(whoCanExecute: CommandUsage.CLIENT_ONLY)]
+    public void OnVoteNo(CCSPlayerController? player, CommandInfo command)
+    {
+        if (player == null || !_warmupSystem.IsWarmupMode()) return;
+        _warmupSystem.VoteNo(player);
+    }
 }
