@@ -23,6 +23,7 @@ public partial class FiveStackPlugin : BasePlugin
     private readonly GameBackUpRounds _gameBackupRounds;
     private readonly EnvironmentService _environmentService;
     private readonly SteamAPI _steamAPI;
+    private readonly WarmupSystem _warmupSystem;
 
     public override string ModuleName => "FiveStack";
     public override string ModuleVersion => "__RELEASE_VERSION__";
@@ -42,6 +43,7 @@ public partial class FiveStackPlugin : BasePlugin
         SurrenderSystem surrenderSystem,
         GameBackUpRounds backUpManagement,
         EnvironmentService environmentService,
+        WarmupSystem warmupSystem,
         IStringLocalizer localizer
     )
     {
@@ -58,6 +60,7 @@ public partial class FiveStackPlugin : BasePlugin
         _surrenderSystem = surrenderSystem;
         _gameBackupRounds = backUpManagement;
         _environmentService = environmentService;
+        _warmupSystem = warmupSystem;
 
         _pingTimer = new Timer(Ping, null, TimeSpan.Zero, TimeSpan.FromSeconds(15));
     }
@@ -79,6 +82,11 @@ public partial class FiveStackPlugin : BasePlugin
         _environmentService.Load();
 
         _logger.LogInformation($"Server ID: {_environmentService.GetServerId()}");
+
+        if (_environmentService.IsWarmupMode())
+        {
+            _logger.LogInformation("[Warmup] Server running in WARMUP MODE - player commands enabled");
+        }
 
         ConnectClientFunc.Hook(ConnectClientHook, HookMode.Pre);
 

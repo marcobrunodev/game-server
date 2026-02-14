@@ -20,6 +20,7 @@ public class FiveStackServiceCollection : IPluginServiceCollection<FiveStackPlug
 
         serviceCollection.AddSingleton<CoachSystem>();
         serviceCollection.AddSingleton<CaptainSystem>();
+        serviceCollection.AddSingleton<WarmupSystem>();
 
         serviceCollection.AddTransient<MatchManager>();
         serviceCollection.AddTransient<VoteSystem>();

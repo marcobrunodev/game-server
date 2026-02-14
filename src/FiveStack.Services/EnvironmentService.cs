@@ -59,6 +59,11 @@ public class EnvironmentService
         return Environment.GetEnvironmentVariable("OFFLINE_MODE") == "true";
     }
 
+    public bool IsWarmupMode()
+    {
+        return Environment.GetEnvironmentVariable("WARMUP_MODE") == "true";
+    }
+
     public string? GetOfflineMatchData()
     {
         return Environment.GetEnvironmentVariable("GAME_SERVER_OFFLINE_MATCH_DATA");
