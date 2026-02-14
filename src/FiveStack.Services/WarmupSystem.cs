@@ -203,14 +203,23 @@ public class WarmupSystem
     // Public method for direct commands
     public void ChangeToMode(CCSPlayerController player, string modeName, int gameType, int gameMode)
     {
+        _logger.LogInformation($"[Warmup] ChangeToMode called: {modeName}, IsWarmupMode: {IsWarmupMode()}");
+        player.PrintToChat($" {ChatColors.Yellow}[DEBUG] Changing to {modeName}...");
         ChangeMode(player, modeName, gameType, gameMode);
     }
 
     private void ChangeMode(CCSPlayerController player, string modeName, int gameType, int gameMode)
     {
-        if (!IsWarmupMode()) return;
+        _logger.LogInformation($"[Warmup] ChangeMode called: {modeName}");
+
+        if (!IsWarmupMode())
+        {
+            _logger.LogWarning($"[Warmup] ChangeMode rejected: not in warmup mode");
+            return;
+        }
 
         // Execute mode change immediately (warmup is casual)
+        _logger.LogInformation($"[Warmup] Executing game_type {gameType}, game_mode {gameMode}");
         Server.ExecuteCommand($"game_type {gameType}");
         Server.ExecuteCommand($"game_mode {gameMode}");
 
