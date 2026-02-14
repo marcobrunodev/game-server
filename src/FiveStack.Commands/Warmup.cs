@@ -96,4 +96,31 @@ public partial class FiveStackPlugin
         if (player == null || !_warmupSystem.IsWarmupMode()) return;
         _warmupSystem.VoteNo(player);
     }
+
+    // Direct mode commands (no menu needed)
+    [ConsoleCommand("css_dm", "Change to Deathmatch")]
+    [ConsoleCommand("css_deathmatch", "Change to Deathmatch")]
+    [CommandHelper(whoCanExecute: CommandUsage.CLIENT_ONLY)]
+    public void OnDeathmatch(CCSPlayerController? player, CommandInfo command)
+    {
+        if (player == null || !_warmupSystem.IsWarmupMode()) return;
+        _warmupSystem.ChangeToMode(player, "Deathmatch", 1, 2);
+    }
+
+    [ConsoleCommand("css_ar", "Change to Arms Race")]
+    [ConsoleCommand("css_armsrace", "Change to Arms Race")]
+    [CommandHelper(whoCanExecute: CommandUsage.CLIENT_ONLY)]
+    public void OnArmsRace(CCSPlayerController? player, CommandInfo command)
+    {
+        if (player == null || !_warmupSystem.IsWarmupMode()) return;
+        _warmupSystem.ChangeToMode(player, "Arms Race", 1, 0);
+    }
+
+    [ConsoleCommand("css_retake", "Change to Retake")]
+    [CommandHelper(whoCanExecute: CommandUsage.CLIENT_ONLY)]
+    public void OnRetake(CCSPlayerController? player, CommandInfo command)
+    {
+        if (player == null || !_warmupSystem.IsWarmupMode()) return;
+        _warmupSystem.ChangeToMode(player, "Retake", 3, 0);
+    }
 }

@@ -62,8 +62,7 @@ public class WarmupSystem
     {
         ("Deathmatch", 1, 2),
         ("Arms Race", 1, 0),
-        ("Retake", 3, 0),
-        ("Competitive", 0, 1)
+        ("Retake", 3, 0)
     };
 
     public WarmupSystem(
@@ -233,6 +232,12 @@ public class WarmupSystem
         }
 
         MenuManager.OpenChatMenu(player, menu);
+    }
+
+    // Public method for direct commands
+    public void ChangeToMode(CCSPlayerController player, string modeName, int gameType, int gameMode)
+    {
+        ChangeMode(player, modeName, gameType, gameMode);
     }
 
     private void ChangeMode(CCSPlayerController player, string modeName, int gameType, int gameMode)
@@ -446,13 +451,9 @@ public class WarmupSystem
         }
 
         player.PrintToChat($" {ChatColors.Yellow}═══ Warmup Commands ═══");
-        player.PrintToChat($" {ChatColors.Green}.menu{ChatColors.White} - Open main menu");
-        player.PrintToChat($" {ChatColors.Green}.bots{ChatColors.White} - Bot settings");
-        player.PrintToChat($" {ChatColors.Green}.map{ChatColors.White} - Vote to change map");
-        player.PrintToChat($" {ChatColors.Green}.mode{ChatColors.White} - Vote to change mode");
-        player.PrintToChat($" {ChatColors.Green}.yes{ChatColors.White} / {ChatColors.Red}.no{ChatColors.White} - Vote");
-        player.PrintToChat($" {ChatColors.Green}.settings{ChatColors.White} - Server settings");
-        player.PrintToChat($" {ChatColors.Green}.give{ChatColors.White} - Give weapons");
+        player.PrintToChat($" {ChatColors.Green}.dm{ChatColors.White} - Deathmatch | {ChatColors.Green}.ar{ChatColors.White} - Arms Race | {ChatColors.Green}.retake{ChatColors.White} - Retake");
+        player.PrintToChat($" {ChatColors.Green}.kickbots{ChatColors.White} - Remove bots | {ChatColors.Green}.addbots{ChatColors.White} - Add bots");
+        player.PrintToChat($" {ChatColors.Green}.yes{ChatColors.White} / {ChatColors.Red}.no{ChatColors.White} - Vote on changes");
         player.PrintToChat($" {ChatColors.Green}.help{ChatColors.White} - Show this help");
     }
 
