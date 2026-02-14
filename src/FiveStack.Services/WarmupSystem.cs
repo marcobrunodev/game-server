@@ -2,42 +2,16 @@ using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Modules.Cvars;
 using CounterStrikeSharp.API.Modules.Menu;
-using CounterStrikeSharp.API.Modules.Timers;
 using CounterStrikeSharp.API.Modules.Utils;
 using Microsoft.Extensions.Logging;
 
 namespace FiveStack;
-
-// Vote types
-public enum VoteType
-{
-    ChangeMap,
-    ChangeMode
-}
-
-// Active vote state
-public class VoteState
-{
-    public VoteType Type { get; set; }
-    public string Description { get; set; } = "";
-    public string InitiatorName { get; set; } = "";
-    public HashSet<ulong> YesVotes { get; set; } = new();
-    public HashSet<ulong> NoVotes { get; set; } = new();
-    public Action? OnSuccess { get; set; }
-    public CounterStrikeSharp.API.Modules.Timers.Timer? Timer { get; set; }
-}
 
 public class WarmupSystem
 {
     private readonly ILogger<WarmupSystem> _logger;
     private readonly EnvironmentService _environmentService;
     private readonly GameServer _gameServer;
-
-    // Current active vote (only one at a time)
-    private VoteState? _activeVote;
-
-    // Vote duration in seconds
-    private const float VOTE_DURATION = 20f;
 
     // Available maps for warmup
     private static readonly string[] WarmupMaps = new[]
@@ -193,21 +167,13 @@ public class WarmupSystem
     {
         if (!IsWarmupMode()) return;
 
-        // Start vote for map change
-        StartVote(
-            player,
-            VoteType.ChangeMap,
-            $"Change map to {ChatColors.Yellow}{FormatMapName(mapName)}",
-            () =>
-            {
-                BroadcastMessage($"Map changing to {ChatColors.Yellow}{FormatMapName(mapName)}");
-                _logger.LogInformation($"[Warmup] Vote passed: changing map to {mapName}");
-                Server.NextFrame(() =>
-                {
-                    Server.ExecuteCommand($"changelevel {mapName}");
-                });
-            }
-        );
+        // Execute map change immediately (warmup is casual)
+        BroadcastMessage($"{ChatColors.Green}{player.PlayerName}{ChatColors.White} changing map to {ChatColors.Yellow}{FormatMapName(mapName)}");
+        _logger.LogInformation($"[Warmup] {player.PlayerName} changed map to {mapName}");
+        Server.NextFrame(() =>
+        {
+            Server.ExecuteCommand($"changelevel {mapName}");
+        });
     }
 
     private string FormatMapName(string mapName)
@@ -244,26 +210,18 @@ public class WarmupSystem
     {
         if (!IsWarmupMode()) return;
 
-        // Start vote for mode change
-        StartVote(
-            player,
-            VoteType.ChangeMode,
-            $"Change mode to {ChatColors.Yellow}{modeName}",
-            () =>
-            {
-                Server.ExecuteCommand($"game_type {gameType}");
-                Server.ExecuteCommand($"game_mode {gameMode}");
+        // Execute mode change immediately (warmup is casual)
+        Server.ExecuteCommand($"game_type {gameType}");
+        Server.ExecuteCommand($"game_mode {gameMode}");
 
-                BroadcastMessage($"Mode changing to {ChatColors.Yellow}{modeName}");
-                BroadcastMessage($"{ChatColors.Grey}Map will restart to apply changes...");
-                _logger.LogInformation($"[Warmup] Vote passed: changing mode to {modeName}");
+        BroadcastMessage($"{ChatColors.Green}{player.PlayerName}{ChatColors.White} changed mode to {ChatColors.Yellow}{modeName}");
+        BroadcastMessage($"{ChatColors.Grey}Map will restart to apply changes...");
+        _logger.LogInformation($"[Warmup] {player.PlayerName} changed mode to {modeName}");
 
-                Server.NextFrame(() =>
-                {
-                    Server.ExecuteCommand("mp_restartgame 1");
-                });
-            }
-        );
+        Server.NextFrame(() =>
+        {
+            Server.ExecuteCommand("mp_restartgame 1");
+        });
     }
 
     // ===== SETTINGS MENU =====
@@ -453,7 +411,7 @@ public class WarmupSystem
         player.PrintToChat($" {ChatColors.Yellow}═══ Warmup Commands ═══");
         player.PrintToChat($" {ChatColors.Green}.dm{ChatColors.White} - Deathmatch | {ChatColors.Green}.ar{ChatColors.White} - Arms Race | {ChatColors.Green}.retake{ChatColors.White} - Retake");
         player.PrintToChat($" {ChatColors.Green}.kickbots{ChatColors.White} - Remove bots | {ChatColors.Green}.addbots{ChatColors.White} - Add bots");
-        player.PrintToChat($" {ChatColors.Green}.yes{ChatColors.White} / {ChatColors.Red}.no{ChatColors.White} - Vote on changes");
+        player.PrintToChat($" {ChatColors.Green}.map{ChatColors.White} - Change map | {ChatColors.Green}.menu{ChatColors.White} - Main menu");
         player.PrintToChat($" {ChatColors.Green}.help{ChatColors.White} - Show this help");
     }
 
@@ -472,109 +430,6 @@ public class WarmupSystem
         menu.AddMenuOption("❓ Help", (p, opt) => ShowHelp(p));
 
         MenuManager.OpenChatMenu(player, menu);
-    }
-
-    // ===== VOTING SYSTEM =====
-
-    private void StartVote(CCSPlayerController initiator, VoteType type, string description, Action onSuccess)
-    {
-        if (!IsWarmupMode()) return;
-
-        // Check if vote already active
-        if (_activeVote != null)
-        {
-            initiator.PrintToChat($" {ChatColors.Red}A vote is already in progress! Type .yes or .no to vote.");
-            return;
-        }
-
-        // Create new vote
-        _activeVote = new VoteState
-        {
-            Type = type,
-            Description = description,
-            InitiatorName = initiator.PlayerName,
-            OnSuccess = onSuccess
-        };
-
-        // Initiator automatically votes yes
-        _activeVote.YesVotes.Add(initiator.SteamID);
-
-        // Broadcast vote started
-        BroadcastMessage($"{ChatColors.Green}{initiator.PlayerName}{ChatColors.White} started a vote:");
-        BroadcastMessage($"{description}");
-        BroadcastMessage($"Type {ChatColors.Green}.yes{ChatColors.White} or {ChatColors.Red}.no{ChatColors.White} to vote (20 seconds)");
-
-        _logger.LogInformation($"[Warmup] {initiator.PlayerName} started vote: {description}");
-
-        // Start timer to end vote after 20 seconds
-        _activeVote.Timer = new CounterStrikeSharp.API.Modules.Timers.Timer(VOTE_DURATION, EndVote, TimerFlags.STOP_ON_MAPCHANGE);
-    }
-
-    public void VoteYes(CCSPlayerController player)
-    {
-        if (!IsWarmupMode()) return;
-
-        if (_activeVote == null)
-        {
-            player.PrintToChat($" {ChatColors.Red}No active vote. Use .mode or .map to start one.");
-            return;
-        }
-
-        // Remove from no votes if they changed their mind
-        _activeVote.NoVotes.Remove(player.SteamID);
-        _activeVote.YesVotes.Add(player.SteamID);
-
-        BroadcastMessage($"{ChatColors.Green}{player.PlayerName}{ChatColors.White} voted {ChatColors.Green}YES{ChatColors.White} ({_activeVote.YesVotes.Count} yes / {_activeVote.NoVotes.Count} no)");
-        _logger.LogInformation($"[Warmup] {player.PlayerName} voted YES");
-    }
-
-    public void VoteNo(CCSPlayerController player)
-    {
-        if (!IsWarmupMode()) return;
-
-        if (_activeVote == null)
-        {
-            player.PrintToChat($" {ChatColors.Red}No active vote. Use .mode or .map to start one.");
-            return;
-        }
-
-        // Remove from yes votes if they changed their mind
-        _activeVote.YesVotes.Remove(player.SteamID);
-        _activeVote.NoVotes.Add(player.SteamID);
-
-        BroadcastMessage($"{ChatColors.Green}{player.PlayerName}{ChatColors.White} voted {ChatColors.Red}NO{ChatColors.White} ({_activeVote.YesVotes.Count} yes / {_activeVote.NoVotes.Count} no)");
-        _logger.LogInformation($"[Warmup] {player.PlayerName} voted NO");
-    }
-
-    private void EndVote()
-    {
-        if (_activeVote == null) return;
-
-        var yesCount = _activeVote.YesVotes.Count;
-        var noCount = _activeVote.NoVotes.Count;
-
-        _logger.LogInformation($"[Warmup] Vote ended: {yesCount} yes, {noCount} no");
-
-        if (yesCount > noCount)
-        {
-            // Vote passed
-            BroadcastMessage($"Vote {ChatColors.Green}PASSED{ChatColors.White}! ({yesCount} yes / {noCount} no)");
-            _activeVote.OnSuccess?.Invoke();
-        }
-        else
-        {
-            // Vote failed
-            BroadcastMessage($"Vote {ChatColors.Red}FAILED{ChatColors.White}. ({yesCount} yes / {noCount} no)");
-        }
-
-        // Clean up
-        _activeVote.Timer?.Kill();
-        _activeVote = null;
-    }
-
-    public bool HasActiveVote()
-    {
-        return _activeVote != null;
     }
 
     // ===== UTILITY =====

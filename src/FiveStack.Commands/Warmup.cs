@@ -72,29 +72,12 @@ public partial class FiveStackPlugin
     }
 
     [ConsoleCommand("css_whelp", "Show warmup commands help")]
+    [ConsoleCommand("css_help", "Show warmup commands help")]
     [CommandHelper(whoCanExecute: CommandUsage.CLIENT_ONLY)]
     public void OnWarmupHelp(CCSPlayerController? player, CommandInfo command)
     {
         if (player == null) return;
         _warmupSystem.ShowHelp(player);
-    }
-
-    [ConsoleCommand("css_yes", "Vote yes on current vote")]
-    [ConsoleCommand("css_y", "Vote yes on current vote")]
-    [CommandHelper(whoCanExecute: CommandUsage.CLIENT_ONLY)]
-    public void OnVoteYes(CCSPlayerController? player, CommandInfo command)
-    {
-        if (player == null || !_warmupSystem.IsWarmupMode()) return;
-        _warmupSystem.VoteYes(player);
-    }
-
-    [ConsoleCommand("css_no", "Vote no on current vote")]
-    [ConsoleCommand("css_n", "Vote no on current vote")]
-    [CommandHelper(whoCanExecute: CommandUsage.CLIENT_ONLY)]
-    public void OnVoteNo(CCSPlayerController? player, CommandInfo command)
-    {
-        if (player == null || !_warmupSystem.IsWarmupMode()) return;
-        _warmupSystem.VoteNo(player);
     }
 
     // Direct mode commands (no menu needed)
