@@ -288,7 +288,7 @@ public class WarmupSystem
             player.PrintToChat($" {ChatColors.Green}Noclip ENABLED");
         }
 
-        Utilities.SetStateChanged(pawn, "CBaseEntity", "m_MoveType");
+        CounterStrikeSharp.API.Utilities.SetStateChanged(pawn, "CBaseEntity", "m_MoveType");
         _logger.LogInformation($"[Warmup] {player.PlayerName} toggled noclip");
     }
 
