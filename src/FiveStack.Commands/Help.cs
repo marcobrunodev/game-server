@@ -18,6 +18,13 @@ public partial class FiveStackPlugin
             return;
         }
 
+        // Se está no modo warmup, mostrar ajuda do warmup
+        if (_warmupSystem.IsWarmupMode())
+        {
+            _warmupSystem.ShowHelp(player);
+            return;
+        }
+
         command.ReplyToCommand(_localizer["help.available"]);
 
         command.ReplyToCommand(_localizer["help.toggle_ready", CommandUtility.PublicChatTrigger]);

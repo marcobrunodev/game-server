@@ -72,7 +72,6 @@ public partial class FiveStackPlugin
     }
 
     [ConsoleCommand("css_whelp", "Show warmup commands help")]
-    [ConsoleCommand("css_help", "Show warmup commands help")]
     [CommandHelper(whoCanExecute: CommandUsage.CLIENT_ONLY)]
     public void OnWarmupHelp(CCSPlayerController? player, CommandInfo command)
     {
