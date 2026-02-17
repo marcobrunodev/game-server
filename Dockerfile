@@ -115,7 +115,9 @@ RUN mv /opt/metamod/addons /opt/addons && \
 	cp -R /opt/counterstrikesharp/addons/counterstrikesharp /opt/addons && \
 	mkdir -p /opt/addons/counterstrikesharp/plugins && \
 	mkdir -p /opt/addons/counterstrikesharp/plugins-disabled && \
+	mkdir -p /opt/addons/counterstrikesharp/shared && \
 	cp -R /opt/cs2-retakes/addons/counterstrikesharp/plugins/RetakesPlugin /opt/addons/counterstrikesharp/plugins-disabled/ && \
+	cp -R /opt/cs2-retakes/addons/counterstrikesharp/shared/RetakesPluginShared /opt/addons/counterstrikesharp/shared/ && \
 	cp -R /opt/cs2-retakes/addons/counterstrikesharp/configs /opt/addons/counterstrikesharp/ 2>/dev/null || true && \
 	rm -rf /opt/metamod /opt/counterstrikesharp /opt/cs2-retakes
 

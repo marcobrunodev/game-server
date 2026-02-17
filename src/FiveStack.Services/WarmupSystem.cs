@@ -289,14 +289,30 @@ public class WarmupSystem
                 {
                     _logger.LogInformation($"[Warmup] Installing RetakesPlugin from {sourceDir} to {targetDir}");
                     CopyDirectory(sourceDir, targetDir);
+                    // Explicitly load the plugin after copying
+                    _logger.LogInformation("[Warmup] Loading RetakesPlugin...");
+                    Server.ExecuteCommand("css_plugins load RetakesPlugin");
                 }
                 else if (Directory.Exists(targetDir))
                 {
                     _logger.LogInformation("[Warmup] RetakesPlugin already installed");
+                    // Make sure it's loaded
+                    Server.ExecuteCommand("css_plugins load RetakesPlugin");
                 }
                 else
                 {
                     _logger.LogWarning($"[Warmup] RetakesPlugin source not found at {sourceDir}");
+                    _logger.LogWarning($"[Warmup] Checking if source exists: {Directory.Exists(sourceDir)}");
+                    // List contents of plugins-disabled for debugging
+                    if (Directory.Exists(DisabledPluginsPath))
+                    {
+                        var dirs = Directory.GetDirectories(DisabledPluginsPath);
+                        _logger.LogWarning($"[Warmup] Contents of plugins-disabled: {string.Join(", ", dirs)}");
+                    }
+                    else
+                    {
+                        _logger.LogWarning($"[Warmup] plugins-disabled folder doesn't exist at {DisabledPluginsPath}");
+                    }
                 }
             }
             else
