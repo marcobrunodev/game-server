@@ -77,6 +77,7 @@ ENV SERVER_TYPE="Ranked"
 
 ENV METAMOD_URL=https://mms.alliedmods.net/mmsdrop/2.0/mmsource-2.0.0-git1383-linux.tar.gz
 ENV COUNTER_STRIKE_SHARP_URL=https://github.com/roflmuffin/CounterStrikeSharp/releases/download/v1.0.362/counterstrikesharp-with-runtime-linux-1.0.362.zip
+ENV CS2_RETAKES_URL=https://github.com/B3none/cs2-retakes/releases/download/3.0.3/RetakesPlugin-3.0.3.zip
 
 RUN apt-get update && \
 	apt-get install -y --no-install-recommends \
@@ -94,13 +95,16 @@ RUN mkdir -p $DATA_DIR $STEAMCMD_DIR $BASE_SERVER_DIR $INSTANCE_SERVER_DIR && \
 	useradd -d $DATA_DIR -s /bin/bash $USER && \
 	ulimit -n 2048
 
-RUN mkdir -p /opt/metamod /opt/counterstrikesharp && \
+RUN mkdir -p /opt/metamod /opt/counterstrikesharp /opt/cs2-retakes && \
 	wget -q $METAMOD_URL -O /tmp/metamod.tar.gz && \
 	tar -xz -C /opt/metamod -f /tmp/metamod.tar.gz && \
 	rm /tmp/metamod.tar.gz && \
 	wget -q $COUNTER_STRIKE_SHARP_URL -O /tmp/counterstrikesharp.zip && \
 	unzip -q /tmp/counterstrikesharp.zip -d /opt/counterstrikesharp && \
-	rm /tmp/counterstrikesharp.zip
+	rm /tmp/counterstrikesharp.zip && \
+	wget -q $CS2_RETAKES_URL -O /tmp/cs2-retakes.zip && \
+	unzip -q /tmp/cs2-retakes.zip -d /opt/cs2-retakes && \
+	rm /tmp/cs2-retakes.zip
 
 COPY /cfg /opt/server-cfg
 COPY /scripts /opt/scripts
@@ -110,6 +114,9 @@ RUN mv /opt/metamod/addons /opt/addons && \
 	cp -R /opt/counterstrikesharp/addons/metamod /opt/addons && \
 	cp -R /opt/counterstrikesharp/addons/counterstrikesharp /opt/addons && \
 	mkdir -p /opt/addons/counterstrikesharp/plugins && \
-	rm -rf /opt/metamod /opt/counterstrikesharp
+	mkdir -p /opt/addons/counterstrikesharp/plugins-disabled && \
+	cp -R /opt/cs2-retakes/addons/counterstrikesharp/plugins/RetakesPlugin /opt/addons/counterstrikesharp/plugins-disabled/ && \
+	cp -R /opt/cs2-retakes/addons/counterstrikesharp/configs /opt/addons/counterstrikesharp/ 2>/dev/null || true && \
+	rm -rf /opt/metamod /opt/counterstrikesharp /opt/cs2-retakes
 
 ENTRYPOINT ["/bin/bash", "-c", "/opt/scripts/setup.sh && /opt/scripts/server.sh"]

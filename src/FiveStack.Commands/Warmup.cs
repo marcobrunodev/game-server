@@ -103,6 +103,6 @@ public partial class FiveStackPlugin
     public void OnRetake(CCSPlayerController? player, CommandInfo command)
     {
         if (player == null || !_warmupSystem.IsWarmupMode()) return;
-        _warmupSystem.ChangeToMode(player, "Retake", 3, 0);
+        _warmupSystem.ChangeToMode(player, "Retake", 0, 1);  // Competitive mode with RetakesPlugin
     }
 }

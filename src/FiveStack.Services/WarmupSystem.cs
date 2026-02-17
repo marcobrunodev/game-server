@@ -1,3 +1,4 @@
+using System.IO;
 using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Modules.Cvars;
@@ -12,6 +13,11 @@ public class WarmupSystem
     private readonly ILogger<WarmupSystem> _logger;
     private readonly EnvironmentService _environmentService;
     private readonly GameServer _gameServer;
+
+    // Paths for RetakesPlugin management
+    private const string PluginsPath = "/opt/instance/game/csgo/addons/counterstrikesharp/plugins";
+    private const string DisabledPluginsPath = "/opt/instance/game/csgo/addons/counterstrikesharp/plugins-disabled";
+    private const string RetakesPluginName = "RetakesPlugin";
 
     // Available maps for warmup
     private static readonly string[] WarmupMaps = new[]
@@ -31,12 +37,12 @@ public class WarmupSystem
         "cs_italy"
     };
 
-    // Game modes
+    // Game modes (Retake uses Competitive mode with the RetakesPlugin)
     private static readonly (string Name, int GameType, int GameMode)[] GameModes = new[]
     {
         ("Deathmatch", 1, 2),
         ("Arms Race", 1, 0),
-        ("Retake", 3, 0)
+        ("Retake", 0, 1)  // Competitive mode - RetakesPlugin handles the rest
     };
 
     public WarmupSystem(
@@ -227,6 +233,9 @@ public class WarmupSystem
         Server.ExecuteCommand($"game_type {gameType}");
         Server.ExecuteCommand($"game_mode {gameMode}");
 
+        // Handle RetakesPlugin installation/removal
+        ManageRetakesPlugin(modeName == "Retake");
+
         // Get current map name for reload
         var currentMap = Server.MapName;
         _logger.LogInformation($"[Warmup] Current map: {currentMap}, will reload");
@@ -235,8 +244,71 @@ public class WarmupSystem
         {
             // Reload the map to properly initialize the game mode
             // This is necessary for Arms Race to properly set up weapon progression
+            // and for Retakes to initialize spawn points
             Server.ExecuteCommand($"changelevel {currentMap}");
         });
+    }
+
+    private void ManageRetakesPlugin(bool enable)
+    {
+        var sourceDir = Path.Combine(DisabledPluginsPath, RetakesPluginName);
+        var targetDir = Path.Combine(PluginsPath, RetakesPluginName);
+
+        try
+        {
+            if (enable)
+            {
+                // Copy RetakesPlugin to active plugins folder
+                if (Directory.Exists(sourceDir) && !Directory.Exists(targetDir))
+                {
+                    _logger.LogInformation($"[Warmup] Installing RetakesPlugin from {sourceDir} to {targetDir}");
+                    CopyDirectory(sourceDir, targetDir);
+                }
+                else if (Directory.Exists(targetDir))
+                {
+                    _logger.LogInformation("[Warmup] RetakesPlugin already installed");
+                }
+                else
+                {
+                    _logger.LogWarning($"[Warmup] RetakesPlugin source not found at {sourceDir}");
+                }
+            }
+            else
+            {
+                // Remove RetakesPlugin from active plugins folder
+                if (Directory.Exists(targetDir))
+                {
+                    _logger.LogInformation($"[Warmup] Removing RetakesPlugin from {targetDir}");
+                    // Unload the plugin first
+                    Server.ExecuteCommand("css_plugins unload RetakesPlugin");
+                    // Then delete the directory
+                    Directory.Delete(targetDir, true);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError($"[Warmup] Error managing RetakesPlugin: {ex.Message}");
+        }
+    }
+
+    private void CopyDirectory(string sourceDir, string targetDir)
+    {
+        Directory.CreateDirectory(targetDir);
+
+        foreach (var file in Directory.GetFiles(sourceDir))
+        {
+            var fileName = Path.GetFileName(file);
+            var destFile = Path.Combine(targetDir, fileName);
+            File.Copy(file, destFile, true);
+        }
+
+        foreach (var dir in Directory.GetDirectories(sourceDir))
+        {
+            var dirName = Path.GetFileName(dir);
+            var destDir = Path.Combine(targetDir, dirName);
+            CopyDirectory(dir, destDir);
+        }
     }
 
     // ===== SETTINGS MENU =====
