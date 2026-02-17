@@ -218,18 +218,24 @@ public class WarmupSystem
             return;
         }
 
-        // Execute mode change immediately (warmup is casual)
+        BroadcastMessage($"{ChatColors.Green}{player.PlayerName}{ChatColors.White} changed mode to {ChatColors.Yellow}{modeName}");
+        BroadcastMessage($"{ChatColors.Grey}Reloading map to apply changes...");
+        _logger.LogInformation($"[Warmup] {player.PlayerName} changed mode to {modeName}");
+
+        // Set game type and mode before reloading map
         _logger.LogInformation($"[Warmup] Executing game_type {gameType}, game_mode {gameMode}");
         Server.ExecuteCommand($"game_type {gameType}");
         Server.ExecuteCommand($"game_mode {gameMode}");
 
-        BroadcastMessage($"{ChatColors.Green}{player.PlayerName}{ChatColors.White} changed mode to {ChatColors.Yellow}{modeName}");
-        BroadcastMessage($"{ChatColors.Grey}Map will restart to apply changes...");
-        _logger.LogInformation($"[Warmup] {player.PlayerName} changed mode to {modeName}");
+        // Get current map name for reload
+        var currentMap = Server.MapName;
+        _logger.LogInformation($"[Warmup] Current map: {currentMap}, will reload");
 
         Server.NextFrame(() =>
         {
-            Server.ExecuteCommand("mp_restartgame 1");
+            // Reload the map to properly initialize the game mode
+            // This is necessary for Arms Race to properly set up weapon progression
+            Server.ExecuteCommand($"changelevel {currentMap}");
         });
     }
 
