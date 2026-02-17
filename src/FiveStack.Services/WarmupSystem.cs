@@ -266,6 +266,9 @@ public class WarmupSystem
             _logger.LogInformation($"[Warmup] Current map: {currentMap}, will reload");
         }
 
+        // Configure bots based on game mode
+        ConfigureBotsForMode(modeName);
+
         Server.NextFrame(() =>
         {
             // Reload the map to properly initialize the game mode
@@ -331,6 +334,34 @@ public class WarmupSystem
         catch (Exception ex)
         {
             _logger.LogError($"[Warmup] Error managing RetakesPlugin: {ex.Message}");
+        }
+    }
+
+    private void ConfigureBotsForMode(string modeName)
+    {
+        _logger.LogInformation($"[Warmup] Configuring bots for {modeName} mode");
+
+        if (modeName == "Retake")
+        {
+            // Retake mode: Expert bots for challenging gameplay
+            Server.ExecuteCommand("bot_difficulty 3");  // Expert
+            Server.ExecuteCommand("bot_dont_shoot 0");
+            Server.ExecuteCommand("bot_allow_grenades 1");
+            Server.ExecuteCommand("bot_allow_pistols 1");
+            Server.ExecuteCommand("bot_allow_rifles 1");
+            Server.ExecuteCommand("bot_allow_shotguns 1");
+            Server.ExecuteCommand("bot_allow_snipers 1");
+            Server.ExecuteCommand("bot_allow_sub_machine_guns 1");
+            // Better bot behavior for retake scenarios
+            Server.ExecuteCommand("bot_defer_to_human_goals 0");
+            Server.ExecuteCommand("bot_defer_to_human_items 0");
+        }
+        else
+        {
+            // Deathmatch/Arms Race: Normal-Hard bots
+            Server.ExecuteCommand("bot_difficulty 2");  // Hard
+            Server.ExecuteCommand("bot_dont_shoot 0");
+            Server.ExecuteCommand("bot_allow_grenades 1");
         }
     }
 
