@@ -13,6 +13,8 @@ public class WarmupSystem
     private readonly ILogger<WarmupSystem> _logger;
     private readonly EnvironmentService _environmentService;
     private readonly GameServer _gameServer;
+    private static readonly Random _random = new Random();
+    private bool _initialized = false;
 
     // Paths for RetakesPlugin management
     private const string PluginsPath = "/opt/instance/game/csgo/addons/counterstrikesharp/plugins";
@@ -35,6 +37,19 @@ public class WarmupSystem
         "de_overpass",
         "cs_office",
         "cs_italy"
+    };
+
+    // Maps that support Retake (require bomb sites)
+    private static readonly string[] RetakeMaps = new[]
+    {
+        "de_dust2",
+        "de_mirage",
+        "de_inferno",
+        "de_anubis",
+        "de_ancient",
+        "de_nuke",
+        "de_vertigo",
+        "de_overpass"
     };
 
     // Game modes (Retake uses Competitive mode with the RetakesPlugin)
@@ -238,7 +253,18 @@ public class WarmupSystem
 
         // Get current map name for reload
         var currentMap = Server.MapName;
-        _logger.LogInformation($"[Warmup] Current map: {currentMap}, will reload");
+
+        // For Retake mode, ensure we're on a de_ map (requires bomb sites)
+        if (modeName == "Retake" && !currentMap.StartsWith("de_"))
+        {
+            currentMap = RetakeMaps[_random.Next(RetakeMaps.Length)];
+            _logger.LogInformation($"[Warmup] Retake requires de_ map, switching to {currentMap}");
+            BroadcastMessage($"{ChatColors.Grey}Retake requires bomb sites, switching to {currentMap}...");
+        }
+        else
+        {
+            _logger.LogInformation($"[Warmup] Current map: {currentMap}, will reload");
+        }
 
         Server.NextFrame(() =>
         {
