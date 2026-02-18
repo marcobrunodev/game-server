@@ -24,14 +24,18 @@ public class WarmupSystem
 
     // Voting system
     private const int VoteTimeoutSeconds = 30;
-    private ModeVote? _currentVote = null;
+    private WarmupVote? _currentVote = null;
     private Timer? _voteTimer = null;
 
-    private class ModeVote
+    private enum VoteType { Mode, Map }
+
+    private class WarmupVote
     {
-        public string ModeName { get; set; } = "";
-        public int GameType { get; set; }
-        public int GameMode { get; set; }
+        public VoteType Type { get; set; }
+        public string Name { get; set; } = "";  // Mode name or map name
+        public int GameType { get; set; }       // For mode votes
+        public int GameMode { get; set; }       // For mode votes
+        public string? WorkshopId { get; set; } // For workshop map votes
         public string InitiatorName { get; set; } = "";
         public HashSet<ulong> YesVotes { get; set; } = new();
         public HashSet<ulong> NoVotes { get; set; } = new();
@@ -239,19 +243,39 @@ public class WarmupSystem
     {
         if (!IsWarmupMode()) return;
 
-        // Execute map change immediately (warmup is casual)
-        BroadcastMessage($"{ChatColors.Green}{player.PlayerName}{ChatColors.White} changing map to {ChatColors.Yellow}{FormatMapName(mapName)}");
-        _logger.LogInformation($"[Warmup] {player.PlayerName} changed map to {mapName}");
-        Server.NextFrame(() =>
+        if (_currentVote != null)
         {
-            Server.ExecuteCommand($"changelevel {mapName}");
-        });
+            player.PrintToChat($" {ChatColors.Red}A vote is already in progress! Use {ChatColors.Green}.yes{ChatColors.Red} or {ChatColors.Green}.no{ChatColors.Red} to vote.");
+            return;
+        }
+
+        // Check if it's a workshop map
+        if (WorkshopMaps.TryGetValue(mapName, out var workshopId))
+        {
+            StartMapVote(player, mapName, workshopId);
+        }
+        else
+        {
+            StartMapVote(player, mapName, null);
+        }
     }
 
-    // Public method for direct map commands
+    // Public method for direct map commands - starts a vote
     public void ChangeMapDirect(CCSPlayerController player, string mapName)
     {
-        ChangeMap(player, mapName);
+        if (!IsWarmupMode())
+        {
+            player.PrintToChat($" {ChatColors.Red}Map change only available in warmup");
+            return;
+        }
+
+        if (_currentVote != null)
+        {
+            player.PrintToChat($" {ChatColors.Red}A vote is already in progress! Use {ChatColors.Green}.yes{ChatColors.Red} or {ChatColors.Green}.no{ChatColors.Red} to vote.");
+            return;
+        }
+
+        StartMapVote(player, mapName, null);
     }
 
     // Workshop maps with their IDs
@@ -262,14 +286,43 @@ public class WarmupSystem
 
     public void ChangeWorkshopMap(CCSPlayerController player, string mapName, string workshopId)
     {
-        if (!IsWarmupMode()) return;
-
-        BroadcastMessage($"{ChatColors.Green}{player.PlayerName}{ChatColors.White} changing map to {ChatColors.Yellow}{FormatMapName(mapName)}");
-        _logger.LogInformation($"[Warmup] {player.PlayerName} changed to workshop map {mapName} (ID: {workshopId})");
-        Server.NextFrame(() =>
+        if (!IsWarmupMode())
         {
-            Server.ExecuteCommand($"host_workshop_map {workshopId}");
-        });
+            player.PrintToChat($" {ChatColors.Red}Map change only available in warmup");
+            return;
+        }
+
+        if (_currentVote != null)
+        {
+            player.PrintToChat($" {ChatColors.Red}A vote is already in progress! Use {ChatColors.Green}.yes{ChatColors.Red} or {ChatColors.Green}.no{ChatColors.Red} to vote.");
+            return;
+        }
+
+        StartMapVote(player, mapName, workshopId);
+    }
+
+    private void StartMapVote(CCSPlayerController initiator, string mapName, string? workshopId)
+    {
+        _currentVote = new WarmupVote
+        {
+            Type = VoteType.Map,
+            Name = mapName,
+            WorkshopId = workshopId,
+            InitiatorName = initiator.PlayerName,
+            StartTime = DateTime.Now
+        };
+
+        // Initiator automatically votes yes
+        if (initiator.SteamID != 0)
+        {
+            _currentVote.YesVotes.Add(initiator.SteamID);
+        }
+
+        BroadcastMessage($"{ChatColors.Green}{initiator.PlayerName}{ChatColors.White} wants to change map to {ChatColors.Yellow}{FormatMapName(mapName)}");
+        BroadcastMessage($"Type {ChatColors.Green}.yes{ChatColors.White} or {ChatColors.Red}.no{ChatColors.White} to vote! ({VoteTimeoutSeconds}s)");
+
+        // Always start the 30-second timer - vote can pass early if 50%+ vote yes
+        _voteTimer = new Timer(VoteTimeout, null, VoteTimeoutSeconds * 1000, Timeout.Infinite);
     }
 
     private string FormatMapName(string mapName)
@@ -320,9 +373,10 @@ public class WarmupSystem
 
     private void StartModeVote(CCSPlayerController initiator, string modeName, int gameType, int gameMode)
     {
-        _currentVote = new ModeVote
+        _currentVote = new WarmupVote
         {
-            ModeName = modeName,
+            Type = VoteType.Mode,
+            Name = modeName,
             GameType = gameType,
             GameMode = gameMode,
             InitiatorName = initiator.PlayerName,
@@ -356,7 +410,8 @@ public class WarmupSystem
         _currentVote.NoVotes.Remove(player.SteamID);
         _currentVote.YesVotes.Add(player.SteamID);
 
-        player.PrintToChat($" {ChatColors.Green}You voted YES for {_currentVote.ModeName}");
+        var voteTarget = _currentVote.Type == VoteType.Mode ? _currentVote.Name : FormatMapName(_currentVote.Name);
+        player.PrintToChat($" {ChatColors.Green}You voted YES for {voteTarget}");
         CheckVoteResult();
     }
 
@@ -374,7 +429,8 @@ public class WarmupSystem
         _currentVote.YesVotes.Remove(player.SteamID);
         _currentVote.NoVotes.Add(player.SteamID);
 
-        player.PrintToChat($" {ChatColors.Red}You voted NO for {_currentVote.ModeName}");
+        var voteTarget = _currentVote.Type == VoteType.Mode ? _currentVote.Name : FormatMapName(_currentVote.Name);
+        player.PrintToChat($" {ChatColors.Red}You voted NO for {voteTarget}");
         CheckVoteResult();
     }
 
@@ -401,7 +457,7 @@ public class WarmupSystem
         if (yesCount >= requiredVotes)
         {
             BroadcastMessage($"Vote passed! {ChatColors.Green}{yesCount}/{totalPlayers}{ChatColors.White} voted yes.");
-            ExecuteModeChange();
+            ExecuteVote();
             return true;
         }
 
@@ -431,7 +487,7 @@ public class WarmupSystem
             if (yesCount > noCount)
             {
                 BroadcastMessage($"Vote passed! {ChatColors.Green}{yesCount}{ChatColors.White} yes, {ChatColors.Red}{noCount}{ChatColors.White} no.");
-                ExecuteModeChange();
+                ExecuteVote();
             }
             else
             {
@@ -441,16 +497,43 @@ public class WarmupSystem
         });
     }
 
-    private void ExecuteModeChange()
+    private void ExecuteVote()
     {
         if (_currentVote == null) return;
 
-        var modeName = _currentVote.ModeName;
-        var gameType = _currentVote.GameType;
-        var gameMode = _currentVote.GameMode;
+        if (_currentVote.Type == VoteType.Mode)
+        {
+            var modeName = _currentVote.Name;
+            var gameType = _currentVote.GameType;
+            var gameMode = _currentVote.GameMode;
+            CancelVote();
+            ChangeMode(modeName, gameType, gameMode);
+        }
+        else // VoteType.Map
+        {
+            var mapName = _currentVote.Name;
+            var workshopId = _currentVote.WorkshopId;
+            CancelVote();
+            ExecuteMapChange(mapName, workshopId);
+        }
+    }
 
-        CancelVote();
-        ChangeMode(modeName, gameType, gameMode);
+    private void ExecuteMapChange(string mapName, string? workshopId)
+    {
+        BroadcastMessage($"Changing map to {ChatColors.Yellow}{FormatMapName(mapName)}{ChatColors.White}...");
+        _logger.LogInformation($"[Warmup] Map changed to {mapName}");
+
+        Server.NextFrame(() =>
+        {
+            if (workshopId != null)
+            {
+                Server.ExecuteCommand($"host_workshop_map {workshopId}");
+            }
+            else
+            {
+                Server.ExecuteCommand($"changelevel {mapName}");
+            }
+        });
     }
 
     private void CancelVote()
@@ -802,7 +885,7 @@ public class WarmupSystem
         player.PrintToChat($" {ChatColors.Yellow}═══ Warmup Commands ═══");
         player.PrintToChat($" {ChatColors.Green}.dm{ChatColors.White} - Deathmatch | {ChatColors.Green}.ar{ChatColors.White} - Arms Race | {ChatColors.Green}.retake{ChatColors.White} - Retake");
         player.PrintToChat($" {ChatColors.Green}.kickbots{ChatColors.White} - Remove bots | {ChatColors.Green}.addbots{ChatColors.White} - Add bots");
-        player.PrintToChat($" {ChatColors.Green}.yes{ChatColors.White} / {ChatColors.Green}.no{ChatColors.White} - Vote on mode changes");
+        player.PrintToChat($" {ChatColors.Green}.yes{ChatColors.White} / {ChatColors.Green}.no{ChatColors.White} - Vote on mode/map changes");
         player.PrintToChat($" {ChatColors.Yellow}Maps:{ChatColors.White} .dust2 .mirage .inferno .nuke .ancient .anubis .vertigo .overpass");
         player.PrintToChat($" {ChatColors.Yellow}Maps:{ChatColors.White} .office .rio .shoots .baggage .poolday | {ChatColors.Green}.whelp{ChatColors.White} - Help");
     }
