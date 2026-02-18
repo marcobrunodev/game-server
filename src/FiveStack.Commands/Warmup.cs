@@ -105,4 +105,21 @@ public partial class FiveStackPlugin
         if (player == null || !_warmupSystem.IsWarmupMode()) return;
         _warmupSystem.ChangeToMode(player, "Retake", 0, 1);  // Competitive mode with RetakesPlugin
     }
+
+    // Voting commands
+    [ConsoleCommand("css_yes", "Vote yes for mode change")]
+    [CommandHelper(whoCanExecute: CommandUsage.CLIENT_ONLY)]
+    public void OnVoteYes(CCSPlayerController? player, CommandInfo command)
+    {
+        if (player == null || !_warmupSystem.IsWarmupMode()) return;
+        _warmupSystem.VoteYes(player);
+    }
+
+    [ConsoleCommand("css_no", "Vote no for mode change")]
+    [CommandHelper(whoCanExecute: CommandUsage.CLIENT_ONLY)]
+    public void OnVoteNo(CCSPlayerController? player, CommandInfo command)
+    {
+        if (player == null || !_warmupSystem.IsWarmupMode()) return;
+        _warmupSystem.VoteNo(player);
+    }
 }

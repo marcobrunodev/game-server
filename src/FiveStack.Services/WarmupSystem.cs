@@ -21,6 +21,22 @@ public class WarmupSystem
     private const string DisabledPluginsPath = "/opt/instance/game/csgo/addons/counterstrikesharp/plugins-disabled";
     private const string RetakesPluginName = "RetakesPlugin";
 
+    // Voting system
+    private const int VoteTimeoutSeconds = 30;
+    private ModeVote? _currentVote = null;
+    private Timer? _voteTimer = null;
+
+    private class ModeVote
+    {
+        public string ModeName { get; set; } = "";
+        public int GameType { get; set; }
+        public int GameMode { get; set; }
+        public string InitiatorName { get; set; } = "";
+        public HashSet<ulong> YesVotes { get; set; } = new();
+        public HashSet<ulong> NoVotes { get; set; } = new();
+        public DateTime StartTime { get; set; }
+    }
+
     // Available maps for warmup
     private static readonly string[] WarmupMaps = new[]
     {
@@ -215,21 +231,183 @@ public class WarmupSystem
         foreach (var mode in GameModes)
         {
             var modeCopy = mode;
-            menu.AddMenuOption(mode.Name, (p, opt) => ChangeMode(p, modeCopy.Name, modeCopy.GameType, modeCopy.GameMode));
+            menu.AddMenuOption(mode.Name, (p, opt) => ChangeToMode(p, modeCopy.Name, modeCopy.GameType, modeCopy.GameMode));
         }
 
         MenuManager.OpenChatMenu(player, menu);
     }
 
-    // Public method for direct commands
+    // Public method for direct commands - starts a vote
     public void ChangeToMode(CCSPlayerController player, string modeName, int gameType, int gameMode)
     {
         _logger.LogInformation($"[Warmup] ChangeToMode called: {modeName}, IsWarmupMode: {IsWarmupMode()}");
-        player.PrintToChat($" {ChatColors.Yellow}[DEBUG] Changing to {modeName}...");
-        ChangeMode(player, modeName, gameType, gameMode);
+
+        if (!IsWarmupMode())
+        {
+            player.PrintToChat($" {ChatColors.Red}Mode change only available in warmup");
+            return;
+        }
+
+        // Check if there's already a vote in progress
+        if (_currentVote != null)
+        {
+            player.PrintToChat($" {ChatColors.Red}A vote is already in progress! Use {ChatColors.Green}.yes{ChatColors.Red} or {ChatColors.Green}.no{ChatColors.Red} to vote.");
+            return;
+        }
+
+        // Start the vote
+        StartModeVote(player, modeName, gameType, gameMode);
     }
 
-    private void ChangeMode(CCSPlayerController player, string modeName, int gameType, int gameMode)
+    private void StartModeVote(CCSPlayerController initiator, string modeName, int gameType, int gameMode)
+    {
+        _currentVote = new ModeVote
+        {
+            ModeName = modeName,
+            GameType = gameType,
+            GameMode = gameMode,
+            InitiatorName = initiator.PlayerName,
+            StartTime = DateTime.Now
+        };
+
+        // Initiator automatically votes yes
+        if (initiator.SteamID != 0)
+        {
+            _currentVote.YesVotes.Add(initiator.SteamID);
+        }
+
+        BroadcastMessage($"{ChatColors.Green}{initiator.PlayerName}{ChatColors.White} wants to change mode to {ChatColors.Yellow}{modeName}");
+        BroadcastMessage($"Type {ChatColors.Green}.yes{ChatColors.White} or {ChatColors.Red}.no{ChatColors.White} to vote! ({VoteTimeoutSeconds}s)");
+
+        // Check if vote passes immediately (single player or already 50%+)
+        if (CheckVoteResult())
+        {
+            return;
+        }
+
+        // Start timeout timer
+        _voteTimer = new Timer(VoteTimeout, null, VoteTimeoutSeconds * 1000, Timeout.Infinite);
+    }
+
+    public void VoteYes(CCSPlayerController player)
+    {
+        if (_currentVote == null)
+        {
+            player.PrintToChat($" {ChatColors.Red}No vote in progress");
+            return;
+        }
+
+        if (player.SteamID == 0) return;
+
+        // Remove from no votes if they changed their mind
+        _currentVote.NoVotes.Remove(player.SteamID);
+        _currentVote.YesVotes.Add(player.SteamID);
+
+        player.PrintToChat($" {ChatColors.Green}You voted YES for {_currentVote.ModeName}");
+        CheckVoteResult();
+    }
+
+    public void VoteNo(CCSPlayerController player)
+    {
+        if (_currentVote == null)
+        {
+            player.PrintToChat($" {ChatColors.Red}No vote in progress");
+            return;
+        }
+
+        if (player.SteamID == 0) return;
+
+        // Remove from yes votes if they changed their mind
+        _currentVote.YesVotes.Remove(player.SteamID);
+        _currentVote.NoVotes.Add(player.SteamID);
+
+        player.PrintToChat($" {ChatColors.Red}You voted NO for {_currentVote.ModeName}");
+        CheckVoteResult();
+    }
+
+    private bool CheckVoteResult()
+    {
+        if (_currentVote == null) return false;
+
+        var players = Utilities.GetPlayers().Where(p => p.IsValid && !p.IsBot && !p.IsHLTV).ToList();
+        var totalPlayers = players.Count;
+
+        if (totalPlayers == 0)
+        {
+            CancelVote();
+            return false;
+        }
+
+        var yesCount = _currentVote.YesVotes.Count;
+        var noCount = _currentVote.NoVotes.Count;
+        var requiredVotes = (int)Math.Ceiling(totalPlayers / 2.0);
+
+        _logger.LogInformation($"[Warmup] Vote check: {yesCount} yes, {noCount} no, {totalPlayers} players, need {requiredVotes}");
+
+        // Vote passes if yes votes >= 50% of players
+        if (yesCount >= requiredVotes)
+        {
+            BroadcastMessage($"Vote passed! {ChatColors.Green}{yesCount}/{totalPlayers}{ChatColors.White} voted yes.");
+            ExecuteModeChange();
+            return true;
+        }
+
+        // Vote fails if no votes > 50% of players
+        if (noCount > totalPlayers - requiredVotes)
+        {
+            BroadcastMessage($"Vote failed! {ChatColors.Red}{noCount}/{totalPlayers}{ChatColors.White} voted no.");
+            CancelVote();
+            return true;
+        }
+
+        return false;
+    }
+
+    private void VoteTimeout(object? state)
+    {
+        Server.NextFrame(() =>
+        {
+            if (_currentVote == null) return;
+
+            var players = Utilities.GetPlayers().Where(p => p.IsValid && !p.IsBot && !p.IsHLTV).ToList();
+            var totalPlayers = players.Count;
+            var yesCount = _currentVote.YesVotes.Count;
+            var noCount = _currentVote.NoVotes.Count;
+
+            // On timeout, pass if yes > no, otherwise fail
+            if (yesCount > noCount)
+            {
+                BroadcastMessage($"Vote passed! {ChatColors.Green}{yesCount}{ChatColors.White} yes, {ChatColors.Red}{noCount}{ChatColors.White} no.");
+                ExecuteModeChange();
+            }
+            else
+            {
+                BroadcastMessage($"Vote failed! {ChatColors.Green}{yesCount}{ChatColors.White} yes, {ChatColors.Red}{noCount}{ChatColors.White} no.");
+                CancelVote();
+            }
+        });
+    }
+
+    private void ExecuteModeChange()
+    {
+        if (_currentVote == null) return;
+
+        var modeName = _currentVote.ModeName;
+        var gameType = _currentVote.GameType;
+        var gameMode = _currentVote.GameMode;
+
+        CancelVote();
+        ChangeMode(modeName, gameType, gameMode);
+    }
+
+    private void CancelVote()
+    {
+        _voteTimer?.Dispose();
+        _voteTimer = null;
+        _currentVote = null;
+    }
+
+    private void ChangeMode(string modeName, int gameType, int gameMode)
     {
         _logger.LogInformation($"[Warmup] ChangeMode called: {modeName}");
 
@@ -239,9 +417,9 @@ public class WarmupSystem
             return;
         }
 
-        BroadcastMessage($"{ChatColors.Green}{player.PlayerName}{ChatColors.White} changed mode to {ChatColors.Yellow}{modeName}");
+        BroadcastMessage($"Changing mode to {ChatColors.Yellow}{modeName}{ChatColors.White}...");
         BroadcastMessage($"{ChatColors.Grey}Reloading map to apply changes...");
-        _logger.LogInformation($"[Warmup] {player.PlayerName} changed mode to {modeName}");
+        _logger.LogInformation($"[Warmup] Mode changed to {modeName}");
 
         // Set game type and mode before reloading map
         _logger.LogInformation($"[Warmup] Executing game_type {gameType}, game_mode {gameMode}");
@@ -572,6 +750,7 @@ public class WarmupSystem
         player.PrintToChat($" {ChatColors.Green}.dm{ChatColors.White} - Deathmatch | {ChatColors.Green}.ar{ChatColors.White} - Arms Race | {ChatColors.Green}.retake{ChatColors.White} - Retake");
         player.PrintToChat($" {ChatColors.Green}.kickbots{ChatColors.White} - Remove bots | {ChatColors.Green}.addbots{ChatColors.White} - Add bots");
         player.PrintToChat($" {ChatColors.Green}.map{ChatColors.White} - Change map | {ChatColors.Green}.menu{ChatColors.White} - Main menu");
+        player.PrintToChat($" {ChatColors.Green}.yes{ChatColors.White} / {ChatColors.Green}.no{ChatColors.White} - Vote on mode changes");
         player.PrintToChat($" {ChatColors.Green}.help{ChatColors.White} - Show this help");
     }
 
