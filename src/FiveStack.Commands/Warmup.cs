@@ -226,6 +226,6 @@ public partial class FiveStackPlugin
     public void OnMapRio(CCSPlayerController? player, CommandInfo command)
     {
         if (player == null || !_warmupSystem.IsWarmupMode()) return;
-        _warmupSystem.ChangeMapDirect(player, "cs_rio");
+        _warmupSystem.ChangeWorkshopMap(player, "cs_rio", "3071179917");
     }
 }

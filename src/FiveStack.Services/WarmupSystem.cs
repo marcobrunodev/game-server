@@ -254,6 +254,24 @@ public class WarmupSystem
         ChangeMap(player, mapName);
     }
 
+    // Workshop maps with their IDs
+    private static readonly Dictionary<string, string> WorkshopMaps = new()
+    {
+        { "cs_rio", "3071179917" }
+    };
+
+    public void ChangeWorkshopMap(CCSPlayerController player, string mapName, string workshopId)
+    {
+        if (!IsWarmupMode()) return;
+
+        BroadcastMessage($"{ChatColors.Green}{player.PlayerName}{ChatColors.White} changing map to {ChatColors.Yellow}{FormatMapName(mapName)}");
+        _logger.LogInformation($"[Warmup] {player.PlayerName} changed to workshop map {mapName} (ID: {workshopId})");
+        Server.NextFrame(() =>
+        {
+            Server.ExecuteCommand($"host_workshop_map {workshopId}");
+        });
+    }
+
     private string FormatMapName(string mapName)
     {
         // Remove prefix and capitalize
