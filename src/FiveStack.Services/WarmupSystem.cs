@@ -751,7 +751,7 @@ public class WarmupSystem
         player.PrintToChat($" {ChatColors.Green}.kickbots{ChatColors.White} - Remove bots | {ChatColors.Green}.addbots{ChatColors.White} - Add bots");
         player.PrintToChat($" {ChatColors.Green}.map{ChatColors.White} - Change map | {ChatColors.Green}.menu{ChatColors.White} - Main menu");
         player.PrintToChat($" {ChatColors.Green}.yes{ChatColors.White} / {ChatColors.Green}.no{ChatColors.White} - Vote on mode changes");
-        player.PrintToChat($" {ChatColors.Green}.help{ChatColors.White} - Show this help");
+        player.PrintToChat($" {ChatColors.Green}.whelp{ChatColors.White} - Show this help");
     }
 
     // ===== MAIN MENU =====
