@@ -221,11 +221,11 @@ public partial class FiveStackPlugin
         _warmupSystem.ChangeMapDirect(player, "ar_pool_day");
     }
 
-    [ConsoleCommand("css_rio", "Change to de_rio")]
+    [ConsoleCommand("css_rio", "Change to cs_rio")]
     [CommandHelper(whoCanExecute: CommandUsage.CLIENT_ONLY)]
     public void OnMapRio(CCSPlayerController? player, CommandInfo command)
     {
         if (player == null || !_warmupSystem.IsWarmupMode()) return;
-        _warmupSystem.ChangeMapDirect(player, "de_rio");
+        _warmupSystem.ChangeMapDirect(player, "cs_rio");
     }
 }
