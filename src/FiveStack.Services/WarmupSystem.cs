@@ -329,7 +329,7 @@ public class WarmupSystem
     {
         if (_currentVote == null) return false;
 
-        var players = Utilities.GetPlayers().Where(p => p.IsValid && !p.IsBot && !p.IsHLTV).ToList();
+        var players = CounterStrikeSharp.API.Utilities.GetPlayers().Where(p => p.IsValid && !p.IsBot && !p.IsHLTV).ToList();
         var totalPlayers = players.Count;
 
         if (totalPlayers == 0)
@@ -369,7 +369,7 @@ public class WarmupSystem
         {
             if (_currentVote == null) return;
 
-            var players = Utilities.GetPlayers().Where(p => p.IsValid && !p.IsBot && !p.IsHLTV).ToList();
+            var players = CounterStrikeSharp.API.Utilities.GetPlayers().Where(p => p.IsValid && !p.IsBot && !p.IsHLTV).ToList();
             var totalPlayers = players.Count;
             var yesCount = _currentVote.YesVotes.Count;
             var noCount = _currentVote.NoVotes.Count;
