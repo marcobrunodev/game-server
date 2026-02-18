@@ -279,13 +279,7 @@ public class WarmupSystem
         BroadcastMessage($"{ChatColors.Green}{initiator.PlayerName}{ChatColors.White} wants to change mode to {ChatColors.Yellow}{modeName}");
         BroadcastMessage($"Type {ChatColors.Green}.yes{ChatColors.White} or {ChatColors.Red}.no{ChatColors.White} to vote! ({VoteTimeoutSeconds}s)");
 
-        // Check if vote passes immediately (single player or already 50%+)
-        if (CheckVoteResult())
-        {
-            return;
-        }
-
-        // Start timeout timer
+        // Always start the 30-second timer - vote can pass early if 50%+ vote yes
         _voteTimer = new Timer(VoteTimeout, null, VoteTimeoutSeconds * 1000, Timeout.Infinite);
     }
 
