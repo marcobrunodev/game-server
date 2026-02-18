@@ -1,4 +1,5 @@
 using System.IO;
+using System.Linq;
 using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Modules.Cvars;
@@ -189,14 +190,47 @@ public class WarmupSystem
     {
         if (!IsWarmupMode()) return;
 
-        var menu = new ChatMenu("🗺️ Select Map");
+        var menu = new ChatMenu("🗺️ Map Categories");
+        menu.AddMenuOption("🔫 Arms Race Maps (ar_)", (p, opt) => ShowArMapsMenu(p));
+        menu.AddMenuOption("💣 Defuse Maps (de_)", (p, opt) => ShowDeMapsMenu(p));
+        menu.AddMenuOption("👮 Hostage Maps (cs_)", (p, opt) => ShowCsMapsMenu(p));
 
-        foreach (var map in WarmupMaps)
+        MenuManager.OpenChatMenu(player, menu);
+    }
+
+    private void ShowArMapsMenu(CCSPlayerController player)
+    {
+        var menu = new ChatMenu("🔫 Arms Race Maps");
+        var arMaps = WarmupMaps.Where(m => m.StartsWith("ar_")).ToArray();
+        foreach (var map in arMaps)
         {
             var mapName = map;
             menu.AddMenuOption(FormatMapName(map), (p, opt) => ChangeMap(p, mapName));
         }
+        MenuManager.OpenChatMenu(player, menu);
+    }
 
+    private void ShowDeMapsMenu(CCSPlayerController player)
+    {
+        var menu = new ChatMenu("💣 Defuse Maps");
+        var deMaps = WarmupMaps.Where(m => m.StartsWith("de_")).ToArray();
+        foreach (var map in deMaps)
+        {
+            var mapName = map;
+            menu.AddMenuOption(FormatMapName(map), (p, opt) => ChangeMap(p, mapName));
+        }
+        MenuManager.OpenChatMenu(player, menu);
+    }
+
+    private void ShowCsMapsMenu(CCSPlayerController player)
+    {
+        var menu = new ChatMenu("👮 Hostage Maps");
+        var csMaps = WarmupMaps.Where(m => m.StartsWith("cs_")).ToArray();
+        foreach (var map in csMaps)
+        {
+            var mapName = map;
+            menu.AddMenuOption(FormatMapName(map), (p, opt) => ChangeMap(p, mapName));
+        }
         MenuManager.OpenChatMenu(player, menu);
     }
 
