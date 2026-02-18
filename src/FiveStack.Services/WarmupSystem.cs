@@ -52,6 +52,7 @@ public class WarmupSystem
         "de_nuke",
         "de_vertigo",
         "de_overpass",
+        "de_rio",
         "cs_office",
         "cs_italy"
     };
@@ -66,7 +67,8 @@ public class WarmupSystem
         "de_ancient",
         "de_nuke",
         "de_vertigo",
-        "de_overpass"
+        "de_overpass",
+        "de_rio"
     };
 
     // Game modes (Retake uses Competitive mode with the RetakesPlugin)
@@ -245,6 +247,12 @@ public class WarmupSystem
         {
             Server.ExecuteCommand($"changelevel {mapName}");
         });
+    }
+
+    // Public method for direct map commands
+    public void ChangeMapDirect(CCSPlayerController player, string mapName)
+    {
+        ChangeMap(player, mapName);
     }
 
     private string FormatMapName(string mapName)
@@ -777,9 +785,9 @@ public class WarmupSystem
         player.PrintToChat($" {ChatColors.Yellow}═══ Warmup Commands ═══");
         player.PrintToChat($" {ChatColors.Green}.dm{ChatColors.White} - Deathmatch | {ChatColors.Green}.ar{ChatColors.White} - Arms Race | {ChatColors.Green}.retake{ChatColors.White} - Retake");
         player.PrintToChat($" {ChatColors.Green}.kickbots{ChatColors.White} - Remove bots | {ChatColors.Green}.addbots{ChatColors.White} - Add bots");
-        player.PrintToChat($" {ChatColors.Green}.map{ChatColors.White} - Change map | {ChatColors.Green}.menu{ChatColors.White} - Main menu");
         player.PrintToChat($" {ChatColors.Green}.yes{ChatColors.White} / {ChatColors.Green}.no{ChatColors.White} - Vote on mode changes");
-        player.PrintToChat($" {ChatColors.Green}.whelp{ChatColors.White} - Show this help");
+        player.PrintToChat($" {ChatColors.Yellow}Maps:{ChatColors.White} .dust2 .mirage .inferno .nuke .ancient .anubis .vertigo .overpass .rio");
+        player.PrintToChat($" {ChatColors.Yellow}Maps:{ChatColors.White} .office .shoots .baggage .poolday | {ChatColors.Green}.whelp{ChatColors.White} - Help");
     }
 
     // ===== MAIN MENU =====

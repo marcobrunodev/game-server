@@ -122,4 +122,110 @@ public partial class FiveStackPlugin
         if (player == null || !_warmupSystem.IsWarmupMode()) return;
         _warmupSystem.VoteNo(player);
     }
+
+    // Direct map commands (bypass menu issues)
+    [ConsoleCommand("css_dust2", "Change to de_dust2")]
+    [CommandHelper(whoCanExecute: CommandUsage.CLIENT_ONLY)]
+    public void OnMapDust2(CCSPlayerController? player, CommandInfo command)
+    {
+        if (player == null || !_warmupSystem.IsWarmupMode()) return;
+        _warmupSystem.ChangeMapDirect(player, "de_dust2");
+    }
+
+    [ConsoleCommand("css_mirage", "Change to de_mirage")]
+    [CommandHelper(whoCanExecute: CommandUsage.CLIENT_ONLY)]
+    public void OnMapMirage(CCSPlayerController? player, CommandInfo command)
+    {
+        if (player == null || !_warmupSystem.IsWarmupMode()) return;
+        _warmupSystem.ChangeMapDirect(player, "de_mirage");
+    }
+
+    [ConsoleCommand("css_inferno", "Change to de_inferno")]
+    [CommandHelper(whoCanExecute: CommandUsage.CLIENT_ONLY)]
+    public void OnMapInferno(CCSPlayerController? player, CommandInfo command)
+    {
+        if (player == null || !_warmupSystem.IsWarmupMode()) return;
+        _warmupSystem.ChangeMapDirect(player, "de_inferno");
+    }
+
+    [ConsoleCommand("css_nuke", "Change to de_nuke")]
+    [CommandHelper(whoCanExecute: CommandUsage.CLIENT_ONLY)]
+    public void OnMapNuke(CCSPlayerController? player, CommandInfo command)
+    {
+        if (player == null || !_warmupSystem.IsWarmupMode()) return;
+        _warmupSystem.ChangeMapDirect(player, "de_nuke");
+    }
+
+    [ConsoleCommand("css_ancient", "Change to de_ancient")]
+    [CommandHelper(whoCanExecute: CommandUsage.CLIENT_ONLY)]
+    public void OnMapAncient(CCSPlayerController? player, CommandInfo command)
+    {
+        if (player == null || !_warmupSystem.IsWarmupMode()) return;
+        _warmupSystem.ChangeMapDirect(player, "de_ancient");
+    }
+
+    [ConsoleCommand("css_anubis", "Change to de_anubis")]
+    [CommandHelper(whoCanExecute: CommandUsage.CLIENT_ONLY)]
+    public void OnMapAnubis(CCSPlayerController? player, CommandInfo command)
+    {
+        if (player == null || !_warmupSystem.IsWarmupMode()) return;
+        _warmupSystem.ChangeMapDirect(player, "de_anubis");
+    }
+
+    [ConsoleCommand("css_vertigo", "Change to de_vertigo")]
+    [CommandHelper(whoCanExecute: CommandUsage.CLIENT_ONLY)]
+    public void OnMapVertigo(CCSPlayerController? player, CommandInfo command)
+    {
+        if (player == null || !_warmupSystem.IsWarmupMode()) return;
+        _warmupSystem.ChangeMapDirect(player, "de_vertigo");
+    }
+
+    [ConsoleCommand("css_overpass", "Change to de_overpass")]
+    [CommandHelper(whoCanExecute: CommandUsage.CLIENT_ONLY)]
+    public void OnMapOverpass(CCSPlayerController? player, CommandInfo command)
+    {
+        if (player == null || !_warmupSystem.IsWarmupMode()) return;
+        _warmupSystem.ChangeMapDirect(player, "de_overpass");
+    }
+
+    [ConsoleCommand("css_office", "Change to cs_office")]
+    [CommandHelper(whoCanExecute: CommandUsage.CLIENT_ONLY)]
+    public void OnMapOffice(CCSPlayerController? player, CommandInfo command)
+    {
+        if (player == null || !_warmupSystem.IsWarmupMode()) return;
+        _warmupSystem.ChangeMapDirect(player, "cs_office");
+    }
+
+    [ConsoleCommand("css_shoots", "Change to ar_shoots")]
+    [CommandHelper(whoCanExecute: CommandUsage.CLIENT_ONLY)]
+    public void OnMapShoots(CCSPlayerController? player, CommandInfo command)
+    {
+        if (player == null || !_warmupSystem.IsWarmupMode()) return;
+        _warmupSystem.ChangeMapDirect(player, "ar_shoots");
+    }
+
+    [ConsoleCommand("css_baggage", "Change to ar_baggage")]
+    [CommandHelper(whoCanExecute: CommandUsage.CLIENT_ONLY)]
+    public void OnMapBaggage(CCSPlayerController? player, CommandInfo command)
+    {
+        if (player == null || !_warmupSystem.IsWarmupMode()) return;
+        _warmupSystem.ChangeMapDirect(player, "ar_baggage");
+    }
+
+    [ConsoleCommand("css_poolday", "Change to ar_pool_day")]
+    [ConsoleCommand("css_pool_day", "Change to ar_pool_day")]
+    [CommandHelper(whoCanExecute: CommandUsage.CLIENT_ONLY)]
+    public void OnMapPoolDay(CCSPlayerController? player, CommandInfo command)
+    {
+        if (player == null || !_warmupSystem.IsWarmupMode()) return;
+        _warmupSystem.ChangeMapDirect(player, "ar_pool_day");
+    }
+
+    [ConsoleCommand("css_rio", "Change to de_rio")]
+    [CommandHelper(whoCanExecute: CommandUsage.CLIENT_ONLY)]
+    public void OnMapRio(CCSPlayerController? player, CommandInfo command)
+    {
+        if (player == null || !_warmupSystem.IsWarmupMode()) return;
+        _warmupSystem.ChangeMapDirect(player, "de_rio");
+    }
 }
